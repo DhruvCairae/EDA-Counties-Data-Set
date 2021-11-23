@@ -1,0 +1,153 @@
+---
+title: "Data_Wrangling_Counties"
+author: "Dhruv_Cairae"
+date: "11/10/2021"
+output: html_document
+---
+# Analysis of Counties Dataset
+
+--------------------------------------------------------------------------------
+
+Importing Data into R using Tidyverse. Demographic Data of  Counties in the US consisting  of 35 columns and 3142 rows
+The Data Types are appropriate as per the definitions in the dictionary and there are no missing values.
+Column 'employed' appears to contain data on total number of people employed and not percentages.Outliers in the rest are not indicative of any issues related to data integrity or accuracy
+
+--------------------------------------------------------------------------------
+
+## Key Findings:
+
+  *  In 1985 counties out of 3142 the population of women exceeds the population of men
+  *  In 2420 counties the unemployment rate is less than 10%
+  *  Pike county in Pennsylvania has the highest  mean commute of 44 minutes with the top 10 counties 
+     having highest mean commute of well over 41 minutes.
+  *  Forest county in Pennsylvania only has 27% women of the total population, the bottom 10 counties 
+     having lowest percentage of women barely around 33%
+  *  The percentages of races do not total to a 100 in all the cases. For Hawaii county its hardly 76%. 
+     Interestingly on a average Hawaii has the lowest sum of all races across its counties of 84. Eleven
+     counties have a sum that exceeds 100 and only thirteen states have counties where the sum is exactly 100. 
+     Therefore this data is not comprehensive and a few issues on accuracy are certainly visible
+  *  Across the US carpooling as a percentage of commute is most popular in Clay county Georgia with nearly
+     30% utilizing it and least popular in Kenedy and King  county Texas with almost no one using it.The top
+     ten counties where carpool is popular the percentage of people into it is above 21% while in the bottom
+     ten counties between 1 to 3 % people like to carpool. On an average carpool is most popular in Alaska
+     with nearly 12% people preferring it although none of the counties in Alaska are in the top 10 counties
+     across the US where Car pool is most popular. Top 5 states where carpooling is popular average  around 12%
+     across counties. Surprisingly Texas is amongst the top five states where carpooling is popular with around
+     11.8%. It has three counties in top 10 where carpooling happens to be popular and three in bottom three
+     where it happens to be unpopular. 
+
+   
+```{r}
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+library(here)
+
+
+data<-read_csv('C:/Users/Dhruv Cairae/Documents/acs_2015_county_data_revised.csv')
+dim(data)
+#Demographic Data of a Counties consisting  of 35 columns and 3142 rows
+glimpse(data)
+colSums(is.na(data)) 
+#The Data Types are appropriate as per the definitions in the dictionary and there are no missing values
+
+summary(data)
+#column 'employed' appears to contain data on total number of people employed and not percentages
+#outliers in the rest are not indicative of any issues related to data integrity or accuracy
+
+#Number of Counties where population of women exceeds that of men
+data%>%
+  count(data$women>data$men)
+sum(data$women>data$men)
+
+#Number of Counties where unemployment rate is less than 10%
+data%>%
+  count(data$unemployment<10)
+sum(data$unemployment<10)
+
+#Census ID,county name, state, and the mean_commute for  the top 10 counties with the highest mean commute.
+data_selected<-data %>%
+  select(census_id,county, state,mean_commute)
+data_selected %>%
+  group_by(mean_commute) %>%
+  arrange(desc(mean_commute))%>%
+  top_n(n=10,wt=mean_commute)  
+
+#New Variable created for  percentage of women.
+#Census ID,county name, state, and percentage of women for top 10 counties with the lowest percentages
+data_selected1<-data%>%
+  select(census_id,county, state,women,total_pop)%>%
+  mutate(percentage_women=women/total_pop*100)
+data_selected1%>%
+  transmute(census_id,county, state,percentage_women)%>%
+  group_by(percentage_women) %>%
+  slice_min(order_by =percentage_women,n=10)
+
+#Creating a new variable that is the sum of all percentages of races
+data_selected2<-data%>%
+  mutate(people=hispanic+ white +black +native +asian +pacific)
+
+ # Top 10 counties with the lowest sum of these race percentage variables- people
+data_selected2%>%
+  select(county,people)%>%
+  group_by(people) %>%
+  slice_min(order_by =people,n=10)
+
+#The state with lowest average of sum of race percentage variables is Hawaii
+data_selected2 %>%
+  select(state,people)%>%
+  group_by(state) %>%
+  summarize(average_people = mean(people))%>%
+  slice_min(order_by =average_people,n=1)
+
+data_selected2 %>%
+  count(data_selected2$people>100)
+#It seems around 11 counties have a sum of race percentage variables greater than 100
+
+data_selected2 %>%
+  select(state,people)%>%
+  filter(people==100)%>%
+  group_by(state) %>%
+  summarise(Count = n())
+#Thirteen States have a sum exactly equal to 100 in one or more counties
+
+#Creating a ranking order for carpool- percentage commuting via car 
+data_selected3<-data%>%
+  mutate(rank = min_rank(carpool))
+
+#Census ID,county name, state, and carpool number and rank for top 10  counties with the highest &lowest carpool percentages
+data_selected3%>%
+  select(census_id,county, state,carpool,rank)%>%
+  group_by(rank) %>%
+  arrange(desc(rank))%>%
+  top_n(n=10,wt=rank)  
+
+
+data_selected3%>%
+  select(census_id,county, state,carpool,rank)%>%
+  group_by(rank) %>%
+  arrange(rank)%>%
+  top_n(n=10,wt=rank) 
+
+
+data %>%
+  select(state,carpool)%>%
+  group_by(state) %>%
+  summarize(average_carpool = mean(carpool))%>%
+  slice_max(order_by =average_carpool,n=1)
+
+data %>%
+  select(state,carpool)%>%
+  group_by(state) %>%
+  summarize(average_carpool = mean(carpool))%>%
+  slice_max(order_by =average_carpool,n=5)
+
+#Top Five States best for carpooling with Alaska on Top
+```
+
+
+
+
+
+
+
